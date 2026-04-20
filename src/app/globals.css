@@ -1,26 +1,509 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050505;
+  --foreground: #f5f5f5;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--theme-bg, var(--background));
+  color: var(--theme-text-primary, var(--foreground));
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  touch-action: manipulation;
+  transition: transform 140ms ease-out;
+}
+
+.action-button:active {
+  transform: scale(0.97);
+}
+
+.action-button-surface {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  border-radius: 9999px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  box-shadow: 0 0 28px var(--theme-accent-soft);
+  padding-top: 0.95rem;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.action-button:active .action-button-surface {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 36px var(--theme-accent-soft);
+}
+
+.action-icon-layer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 86px;
+  min-width: 86px;
+  transform: translateY(0);
+}
+
+.action-icon-wrap,
+.action-icon-idle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gamble-reel-window {
+  position: absolute;
+  overflow: hidden;
+}
+
+.gamble-reel-strip {
+  position: absolute;
+  inset: -100% 0;
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  transform: translateY(-33.3333%);
+  will-change: transform, opacity;
+}
+
+.gamble-reel-copy {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.gamble-lever-layer {
+  transform-origin: 88% 20%;
+  will-change: transform, opacity;
+}
+
+.smoke-puff-track {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.action-icon-anim {
+  display: inline-flex;
+  animation-duration: 2s;
+  animation-fill-mode: both;
+  animation-timing-function: ease-out;
+}
+
+.action-label {
+  margin-top: 0.54rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.17em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.action-icon-layer-beer,
+.action-icon-layer-shot {
+  margin-top: 0.08rem;
+}
+
+.action-icon-layer-smoke {
+  margin-top: -0.18rem;
+}
+
+.action-icon-layer-gamble {
+  margin-top: 0.18rem;
+}
+
+.action-icon-anim-beer {
+  animation-name: beer-pour;
+}
+
+.action-icon-anim-shot {
+  animation-name: shot-down;
+}
+
+.action-icon-anim-smoke {
+  animation-name: none;
+}
+
+.action-icon-anim-gamble {
+  animation-name: none;
+}
+
+.action-icon-anim-beer .beer-liquid {
+  animation: beer-liquid 2s ease-out both;
+}
+
+.action-icon-anim-shot .shot-liquid {
+  animation: shot-liquid 2s ease-out both;
+}
+
+.action-icon-anim-smoke .smoke-puff {
+  animation: smoke-puff 2s ease-out both;
+}
+
+.action-icon-anim-smoke .smoke-puff-2 {
+  animation-delay: 120ms;
+}
+
+.action-icon-anim-smoke .smoke-puff-track-1 {
+  animation: smoke-rise-1 2s ease-out both;
+}
+
+.action-icon-anim-smoke .smoke-puff-track-2 {
+  animation: smoke-rise-2 2s ease-out both;
+}
+
+.action-icon-anim-gamble .gamble-lever-layer {
+  animation: gamble-lever-pull 2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.action-icon-anim-gamble .gamble-reel-strip-1 {
+  animation: gamble-reel-spin-1 2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.action-icon-anim-gamble .gamble-reel-strip-2 {
+  animation: gamble-reel-spin-2 2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.action-icon-anim-gamble .gamble-reel-strip-3 {
+  animation: gamble-reel-spin-3 2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.floating-feedback {
+  animation: float-feedback 1.6s ease-out both;
+  background: var(--theme-floating-bg);
+  color: var(--theme-text-primary);
+  border-color: var(--theme-border);
+  box-shadow: none;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  transform: translateX(-50%);
+}
+
+.floating-feedback-positive {
+  color: var(--theme-positive);
+  border-color: var(--theme-positive-soft);
+}
+
+.floating-feedback-negative {
+  color: var(--theme-negative);
+  border-color: var(--theme-negative-soft);
+}
+
+.floating-feedback-accent {
+  color: var(--theme-accent);
+  border-color: var(--theme-border);
+}
+
+@keyframes float-feedback {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.96);
+  }
+
+  14% {
+    opacity: 1;
+  }
+
+  55% {
+    opacity: 1;
+    transform: translate(-50%, -34px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -56px) scale(0.98);
+  }
+}
+
+@keyframes beer-pour {
+  0% {
+    transform: translateY(0);
+  }
+
+  12% {
+    transform: translateY(-1px);
+  }
+
+  34% {
+    transform: rotate(-7deg) translateY(2px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes shot-down {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  22% {
+    transform: translateY(5px) scale(0.95);
+  }
+
+  38% {
+    transform: translateY(-3px) scale(1);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes beer-liquid {
+  0% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+
+  48% {
+    opacity: 0.3;
+    clip-path: inset(60% 0 0 0);
+  }
+
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes shot-liquid {
+  0% {
+    opacity: 1;
+  }
+
+  26% {
+    opacity: 0.35;
+    transform: translateY(4px);
+  }
+
+  46% {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes smoke-puff {
+  0% {
+    opacity: 0;
+    transform: translate(0, 2px) scale(1);
+  }
+
+  18% {
+    opacity: 0.72;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(1.5px, -13px) scale(1.05);
+  }
+}
+
+@keyframes smoke-rise-1 {
+  0% {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  12% {
+    opacity: 0.82;
+  }
+
+  62% {
+    opacity: 0.46;
+    transform: translateY(-12px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-26px);
+  }
+}
+
+@keyframes smoke-rise-2 {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  40% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  52% {
+    opacity: 0.78;
+  }
+
+  84% {
+    opacity: 0.38;
+    transform: translateY(-11px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+
+@keyframes gamble-lever-pull {
+  0% {
+    opacity: 1;
+    transform: rotate(0deg);
+  }
+
+  18% {
+    transform: rotate(11deg);
+  }
+
+  38% {
+    transform: rotate(13deg);
+  }
+
+  76% {
+    transform: rotate(13deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes gamble-reel-spin-1 {
+  0% {
+    opacity: 1;
+    transform: translateY(-33.3333%);
+  }
+
+  20% {
+    transform: translateY(-33.3333%);
+  }
+
+  34% {
+    transform: translateY(-66.6667%);
+  }
+
+  48% {
+    opacity: 0.98;
+    transform: translateY(0%);
+  }
+
+  62% {
+    transform: translateY(-66.6667%);
+  }
+
+  76% {
+    transform: translateY(0%);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(-33.3333%);
+  }
+}
+
+@keyframes gamble-reel-spin-2 {
+  0% {
+    opacity: 1;
+    transform: translateY(-33.3333%);
+  }
+
+  22% {
+    transform: translateY(-33.3333%);
+  }
+
+  38% {
+    transform: translateY(0%);
+  }
+
+  54% {
+    opacity: 0.98;
+    transform: translateY(-66.6667%);
+  }
+
+  70% {
+    transform: translateY(0%);
+  }
+
+  84% {
+    transform: translateY(-66.6667%);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(-33.3333%);
+  }
+}
+
+@keyframes gamble-reel-spin-3 {
+  0% {
+    opacity: 1;
+    transform: translateY(-33.3333%);
+  }
+
+  24% {
+    transform: translateY(-33.3333%);
+  }
+
+  40% {
+    transform: translateY(-66.6667%);
+  }
+
+  56% {
+    opacity: 0.98;
+    transform: translateY(0%);
+  }
+
+  72% {
+    transform: translateY(-66.6667%);
+  }
+
+  86% {
+    transform: translateY(0%);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(-33.3333%);
+  }
 }

@@ -1,109 +1,100 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import RoundUpScreen from "./components/RoundUpScreen";
 import StartScreen from "./components/StartScreen";
 import TrackingScreen from "./components/TrackingScreen";
-import RoundUpScreen from "./components/RoundUpScreen";
-
-type Screen = "start" | "tracking" | "roundup";
-type Gender = "male" | "female" | "";
-type EventType = "beer" | "shot" | "cigarette" | "gamble";
-
-type NightEvent = {
-  id: string;
-  type: EventType;
-  value?: number;
-  timestamp: string;
-};
-
-type SavedState = {
-  screen: Screen;
-  beers: number;
-  shots: number;
-  cigarettes: number;
-  gambleTotal: number;
-  showGambleInput: boolean;
-  gambleInput: string;
-  gambleDraft: number;
-  startTime: string | null;
-  endTime: string | null;
-  events: NightEvent[];
-  name: string;
-  gender: Gender;
-  weight: string;
-  height: string;
-  beerVolumeMl: string;
-  beerAbv: string;
-  shotVolumeMl: string;
-  shotAbv: string;
-};
+import {
+  clampToZero,
+  formatClockTime,
+  formatDuration,
+  formatEventTime,
+  formatPromille,
+  getEventLabel,
+} from "./lib/formatters";
+import type { EventType, Gender, NightEvent, SavedState, Screen } from "./lib/types";
 
 const STORAGE_KEY = "lastround-session";
 
-function clampToZero(value: number) {
-  return value < 0 ? 0 : value;
-}
+const defaultSavedState: SavedState = {
+  screen: "start",
+  beers: 0,
+  shots: 0,
+  cigarettes: 0,
+  gambleTotal: 0,
+  showGambleInput: false,
+  gambleInput: "",
+  gambleDraft: 0,
+  startTime: null,
+  endTime: null,
+  events: [],
+  name: "",
+  gender: "",
+  weight: "",
+  height: "",
+  beerVolumeMl: "500",
+  beerAbv: "4.5",
+  shotVolumeMl: "33",
+  shotAbv: "45",
+};
 
-function formatPromille(value: number) {
-  return `${value.toFixed(2)}‰`;
+function getInitialSavedState() {
+  if (typeof window === "undefined") {
+    return defaultSavedState;
+  }
+
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) {
+    return defaultSavedState;
+  }
+
+  try {
+    return {
+      ...defaultSavedState,
+      ...JSON.parse(saved),
+    } as SavedState;
+  } catch {
+    return defaultSavedState;
+  }
 }
 
 export default function Home() {
-  const [screen, setScreen] = useState<Screen>("start");
+  const [initialSavedState] = useState(() => getInitialSavedState());
 
-  const [name, setName] = useState("");
-  const [gender, setGender] = useState<Gender>("");
-  const [weight, setWeight] = useState("");
-  const [height, setHeight] = useState("");
+  const [screen, setScreen] = useState<Screen>(initialSavedState.screen);
 
-  const [beerVolumeMl, setBeerVolumeMl] = useState("500");
-  const [beerAbv, setBeerAbv] = useState("4.5");
-  const [shotVolumeMl, setShotVolumeMl] = useState("33");
-  const [shotAbv, setShotAbv] = useState("45");
+  const [name, setName] = useState(initialSavedState.name);
+  const [gender, setGender] = useState<Gender>(initialSavedState.gender);
+  const [weight, setWeight] = useState(initialSavedState.weight);
+  const [height, setHeight] = useState(initialSavedState.height);
 
-  const [beers, setBeers] = useState(0);
-  const [shots, setShots] = useState(0);
-  const [cigarettes, setCigarettes] = useState(0);
-  const [gambleTotal, setGambleTotal] = useState(0);
+  const [beerVolumeMl, setBeerVolumeMl] = useState(initialSavedState.beerVolumeMl);
+  const [beerAbv, setBeerAbv] = useState(initialSavedState.beerAbv);
+  const [shotVolumeMl, setShotVolumeMl] = useState(initialSavedState.shotVolumeMl);
+  const [shotAbv, setShotAbv] = useState(initialSavedState.shotAbv);
 
-  const [events, setEvents] = useState<NightEvent[]>([]);
-  const [showGambleInput, setShowGambleInput] = useState(false);
-  const [gambleInput, setGambleInput] = useState("");
-  const [gambleDraft, setGambleDraft] = useState(0);
+  const [beers, setBeers] = useState(initialSavedState.beers);
+  const [shots, setShots] = useState(initialSavedState.shots);
+  const [cigarettes, setCigarettes] = useState(initialSavedState.cigarettes);
+  const [gambleTotal, setGambleTotal] = useState(initialSavedState.gambleTotal);
 
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [events, setEvents] = useState<NightEvent[]>(initialSavedState.events);
+  const [showGambleInput, setShowGambleInput] = useState(
+    initialSavedState.showGambleInput
+  );
+  const [gambleInput, setGambleInput] = useState(initialSavedState.gambleInput);
+  const [gambleDraft, setGambleDraft] = useState(initialSavedState.gambleDraft);
+
+  const [startTime, setStartTime] = useState<Date | null>(
+    initialSavedState.startTime ? new Date(initialSavedState.startTime) : null
+  );
+  const [endTime, setEndTime] = useState<Date | null>(
+    initialSavedState.endTime ? new Date(initialSavedState.endTime) : null
+  );
 
   const [copyMessage, setCopyMessage] = useState("");
   const [isLoaded, setIsLoaded] = useState(false);
   const [, setTick] = useState(0);
-
-  const formatTime = (date: Date | null) => {
-    if (!date) return "--:--";
-
-    return date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatEventTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getDuration = () => {
-    if (!startTime || !endTime) return "--";
-
-    const diffMs = endTime.getTime() - startTime.getTime();
-    const totalMinutes = Math.floor(diffMs / 1000 / 60);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    return `${hours}h ${minutes}m`;
-  };
 
   const addEvent = (type: EventType, value?: number) => {
     const newEvent: NightEvent = {
@@ -131,6 +122,18 @@ export default function Home() {
     addEvent("cigarette");
   };
 
+  const resetNightState = () => {
+    setBeers(0);
+    setShots(0);
+    setCigarettes(0);
+    setGambleTotal(0);
+    setEvents([]);
+    setShowGambleInput(false);
+    setGambleInput("");
+    setGambleDraft(0);
+    setCopyMessage("");
+  };
+
   const startNight = () => {
     if (!name.trim() || !gender || !weight || !height) {
       alert("Please fill in name, gender, weight, and height.");
@@ -142,15 +145,7 @@ export default function Home() {
       return;
     }
 
-    setBeers(0);
-    setShots(0);
-    setCigarettes(0);
-    setGambleTotal(0);
-    setEvents([]);
-    setShowGambleInput(false);
-    setGambleInput("");
-    setGambleDraft(0);
-    setCopyMessage("");
+    resetNightState();
     setStartTime(new Date());
     setEndTime(null);
     setScreen("tracking");
@@ -166,13 +161,18 @@ export default function Home() {
     setGambleDraft((prev) => prev + amount);
   };
 
-  const addCustomGambleAmount = () => {
+  const commitCustomGambleAmount = () => {
     const amount = Number(gambleInput);
 
-    if (isNaN(amount) || amount === 0) return;
+    if (Number.isNaN(amount) || amount === 0) return null;
 
-    setGambleDraft((prev) => prev + amount);
+    setGambleTotal((prev) => prev + amount);
+    addEvent("gamble", amount);
+    setShowGambleInput(false);
     setGambleInput("");
+    setGambleDraft(0);
+
+    return amount;
   };
 
   const clearGambleDraft = () => {
@@ -210,32 +210,13 @@ export default function Home() {
 
   const backToStart = () => {
     setScreen("start");
-    setBeers(0);
-    setShots(0);
-    setCigarettes(0);
-    setGambleTotal(0);
-    setEvents([]);
-    setShowGambleInput(false);
-    setGambleInput("");
-    setGambleDraft(0);
+    resetNightState();
     setStartTime(null);
     setEndTime(null);
-    setCopyMessage("");
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  const getEventLabel = (event: NightEvent) => {
-    if (event.type === "beer") return "🍺 Beer";
-    if (event.type === "shot") return "🥃 Shot";
-    if (event.type === "cigarette") return "🚬 Cigarette";
-    if (event.type === "gamble") {
-      const sign = event.value && event.value > 0 ? "+" : "";
-      return `🎰 Gamble ${sign}${event.value}`;
-    }
-    return event.type;
-  };
-
-  const getAlcoholGramsForEvent = (event: NightEvent) => {
+  const getAlcoholGramsForEvent = useCallback((event: NightEvent) => {
     const beerVolume = Number(beerVolumeMl);
     const beerStrength = Number(beerAbv);
     const shotVolume = Number(shotVolumeMl);
@@ -250,9 +231,9 @@ export default function Home() {
     }
 
     return 0;
-  };
+  }, [beerVolumeMl, beerAbv, shotVolumeMl, shotAbv]);
 
-  const calculateBacAtTime = (targetTime: Date) => {
+  const calculateBacAtTime = useCallback((targetTime: Date) => {
     if (!startTime) return 0;
 
     const bodyWeight = Number(weight);
@@ -275,22 +256,12 @@ export default function Home() {
     const bac = totalAlcoholGrams / (bodyWeight * r) - beta * hoursSinceStart;
 
     return clampToZero(bac);
-  };
+  }, [events, gender, getAlcoholGramsForEvent, startTime, weight]);
 
   const currentBac = useMemo(() => {
     if (screen !== "tracking") return 0;
     return calculateBacAtTime(new Date());
-  }, [
-    events,
-    screen,
-    weight,
-    gender,
-    startTime,
-    beerVolumeMl,
-    beerAbv,
-    shotVolumeMl,
-    shotAbv,
-  ]);
+  }, [screen, calculateBacAtTime]);
 
   const peakBacData = useMemo(() => {
     if (!startTime) {
@@ -329,17 +300,7 @@ export default function Home() {
       value: peakValue,
       time: peakTime,
     };
-  }, [
-    events,
-    startTime,
-    endTime,
-    weight,
-    gender,
-    beerVolumeMl,
-    beerAbv,
-    shotVolumeMl,
-    shotAbv,
-  ]);
+  }, [events, startTime, endTime, calculateBacAtTime]);
 
   const degeneracyScore = useMemo(() => {
     const gambleLoss = gambleTotal < 0 ? Math.abs(gambleTotal) : 0;
@@ -371,16 +332,16 @@ export default function Home() {
 
   const shareText = useMemo(() => {
     return [
-      `LastRound // RoundUp`,
+      "LastRound // RoundUp",
       `${name}'s Tonight's Damage Report`,
       `Rank: ${rank}`,
       `Degeneracy Score: ${degeneracyScore}`,
       `Beers: ${beers} | Shots: ${shots} | Cigarettes: ${cigarettes}`,
       `Gamble P/L: €${gambleTotal}`,
       `Peak BAC: ${formatPromille(peakBacData.value)} at ${
-        peakBacData.time ? formatTime(peakBacData.time) : "--:--"
+        peakBacData.time ? formatClockTime(peakBacData.time) : "--:--"
       }`,
-      `Duration: ${getDuration()}`,
+      `Duration: ${formatDuration(startTime, endTime)}`,
       `${highlightText}`,
     ].join("\n");
   }, [
@@ -418,33 +379,11 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const timeout = setTimeout(() => {
+      setIsLoaded(true);
+    }, 0);
 
-    if (saved) {
-      const parsed: SavedState = JSON.parse(saved);
-
-      setScreen(parsed.screen);
-      setBeers(parsed.beers);
-      setShots(parsed.shots);
-      setCigarettes(parsed.cigarettes);
-      setGambleTotal(parsed.gambleTotal);
-      setShowGambleInput(parsed.showGambleInput);
-      setGambleInput(parsed.gambleInput);
-      setGambleDraft(parsed.gambleDraft ?? 0);
-      setStartTime(parsed.startTime ? new Date(parsed.startTime) : null);
-      setEndTime(parsed.endTime ? new Date(parsed.endTime) : null);
-      setEvents(parsed.events ?? []);
-      setName(parsed.name ?? "");
-      setGender(parsed.gender ?? "");
-      setWeight(parsed.weight ?? "");
-      setHeight(parsed.height ?? "");
-      setBeerVolumeMl(parsed.beerVolumeMl ?? "500");
-      setBeerAbv(parsed.beerAbv ?? "4.5");
-      setShotVolumeMl(parsed.shotVolumeMl ?? "33");
-      setShotAbv(parsed.shotAbv ?? "45");
-    }
-
-    setIsLoaded(true);
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -508,7 +447,7 @@ export default function Home() {
 
   if (!isLoaded) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+      <main className="flex min-h-screen items-center justify-center bg-black text-white">
         <p className="text-zinc-400">Loading LastRound...</p>
       </main>
     );
@@ -546,18 +485,19 @@ export default function Home() {
         weight={weight}
         height={height}
         currentBac={formatPromille(currentBac)}
+        peakBacText={formatPromille(peakBacData.value)}
         beers={beers}
         shots={shots}
         cigarettes={cigarettes}
         gambleTotal={gambleTotal}
-        startTimeText={formatTime(startTime)}
+        startTimeText={formatClockTime(startTime)}
         events={events}
         showGambleInput={showGambleInput}
         gambleInput={gambleInput}
         gambleDraft={gambleDraft}
         setGambleInput={setGambleInput}
         addQuickGambleAmount={addQuickGambleAmount}
-        addCustomGambleAmount={addCustomGambleAmount}
+        commitCustomGambleAmount={commitCustomGambleAmount}
         clearGambleDraft={clearGambleDraft}
         handleBeer={handleBeer}
         handleShot={handleShot}
@@ -582,10 +522,12 @@ export default function Home() {
       cigarettes={cigarettes}
       gambleTotal={gambleTotal}
       peakBacText={formatPromille(peakBacData.value)}
-      peakTimeText={peakBacData.time ? formatTime(peakBacData.time) : "--:--"}
-      startTimeText={formatTime(startTime)}
-      endTimeText={formatTime(endTime)}
-      durationText={getDuration()}
+      peakTimeText={
+        peakBacData.time ? formatClockTime(peakBacData.time) : "--:--"
+      }
+      startTimeText={formatClockTime(startTime)}
+      endTimeText={formatClockTime(endTime)}
+      durationText={formatDuration(startTime, endTime)}
       copyMessage={copyMessage}
       handleCopyShareText={handleCopyShareText}
       name={name}
